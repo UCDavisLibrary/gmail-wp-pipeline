@@ -1,0 +1,13 @@
+services:
+  app:
+    image: localhost/local-dev/gmail-wp-pipeline
+    env_file:
+      - .env
+    environment:
+      APP_CRON_SCHEDULE: '*/1 * * * *'
+      APP_CRON_IDLE_AT_STARTUP: 'true'
+    command: ["tail", "-f", "/dev/null"]
+    volumes:
+      - ../../../src:/app
+      - /app/node_modules
+      - ../../../secrets:/secrets

@@ -1,0 +1,8 @@
+services:
+  app:
+    env_file:
+      - .env
+    environment:
+      APP_LOGGER_ALERT_ON_ERROR: 'true'
+    volumes:
+      - ../../../secrets:/secrets

@@ -1,0 +1,23 @@
+{
+  "name": "gmail-wp-pipeline",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "spelkey@ucdavis.edu",
+  "type": "module",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/logging-bunyan": "^5.1.0",
+    "bunyan": "^1.8.15",
+    "commander": "^13.1.0",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "npm": "^11.1.0",
+    "pg": "^8.13.2"
+  }
+}
