@@ -74,17 +74,18 @@ class Logger {
         itisScript: config.logger.scriptLabel,
         itisScriptAlertOnError: `${config.logger.alertOnError}`
       }
+      const instanceName = config.instanceName;
       // merge in labels. gc extracts these from the bunyan payload and adds them to the gc log entry
       // if first arg is a string, bunyan will treat it as a message and stringify all subsequent args
       if ( this._objNotArray(args[0]) ){
-        parsedArgs.push({...args[0], labels});
+        parsedArgs.push({...args[0], labels, instanceName});
         parsedArgs.push(...args.slice(1));
       } else if ( this._objNotArray(args?.[1]) ){
-        parsedArgs.push({...args[1], labels});
+        parsedArgs.push({...args[1], labels, instanceName});
         parsedArgs.push(args[0]);
         parsedArgs.push(...args.slice(2));
       } else {
-        parsedArgs.push({labels});
+        parsedArgs.push({labels, instanceName});
         parsedArgs.push(...args);
       }
     } else {
