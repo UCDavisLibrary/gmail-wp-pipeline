@@ -1,6 +1,7 @@
 import gmail from './gmail.js';
 import logger from './logger.js';
 import config from './config.js';
+import wp from './wp.js';
 
 /**
  * @description Class representing a single email message
@@ -41,6 +42,61 @@ export default class Message {
     });
     logger.info(`Trashed message`, {data: this.loggerInfo});
     return res.data;
+  }
+
+  async postToWordpress(){
+    try {
+      const data = await this.transform();
+      logger.info('Posting to wordpress', {data: this.loggerInfo});
+      this.post = await wp.createNews(data);
+      logger.info('Posted to wordpress', {data: {email: this.loggerInfo, postId: this.post.id}});
+
+    } catch (err) {
+      // todo: undo any writes to wordpress
+      if ( this.mediaUploads ) {}
+      if ( this.authorCreated ) {}
+
+      if ( this.post ){}
+      logger.info('Error posting to wordpress.', {data: this.loggerInfo});
+      throw err;
+    }
+  }
+
+  /**
+   * @description Transform the message data into wordpress post data
+   * @returns {Object} - The post data
+   */
+  async transform(){
+    const post = {
+      status: 'publish',
+      date_gmt: this.sentDate.toISOString(),
+      title: this.emailList?.subjectStrip ? this.subject.replace(this.emailList.subjectStrip, '').trim() : this.subject,
+      content: this.getPostContent()
+    };
+    return post;
+  }
+
+  /**
+   * @description Recursively concatenate all text/plain and text/html from payload parts
+   * @returns {String} - The concatenated content
+   */
+  getPostContent(parts = this.data.payload.parts, content = '') {
+    if ( !Array.isArray(parts) ) return content;
+
+    const hasHtml = parts.some( p => p.mimeType === 'text/html' );
+    for (const part of parts) {
+      if (part.mimeType === 'text/html' || ( !hasHtml && part.mimeType === 'text/plain' )) {
+        content += part?.body?.data ? Buffer.from(part.body.data, 'base64').toString('utf-8') : '';
+      }
+      if (part.parts) {
+        content = this.getPostContent(part.parts, content);
+      }
+    }
+
+    // Strip <head>...</head> tags from the content
+    // They just tend to gum up the works in wordpress
+    content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    return content;
   }
 
   /**
@@ -107,5 +163,14 @@ export default class Message {
    */
   get from(){
     return this.headers.find( h => h.name === 'From' )?.value || '';
+  }
+
+  /**
+   * @description The sent date of the email as a JavaScript Date object
+   * @returns {Date}
+   */
+  get sentDate(){
+    const dateHeader = this.headers.find(h => h.name === 'Date')?.value;
+    return dateHeader ? new Date(dateHeader) : null;
   }
 }

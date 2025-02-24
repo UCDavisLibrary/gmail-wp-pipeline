@@ -4,10 +4,10 @@ services:
     env_file:
       - .env
     environment:
-      APP_CRON_SCHEDULE: '*/1 * * * *'
-      APP_CRON_IDLE_AT_STARTUP: 'true'
-      APP_LOGGER_STREAM: 'console'
-      APP_INSTANCE_NAME: 'local-dev'
+      GMAILWP_CRON_SCHEDULE: '*/1 * * * *'
+      GMAILWP_CRON_IDLE_AT_STARTUP: 'true'
+      GMAILWP_LOGGER_STREAM: 'console'
+      GMAILWP_INSTANCE_NAME: 'local-dev'
     command: ["tail", "-f", "/dev/null"]
     volumes:
       - ../../../src:/app

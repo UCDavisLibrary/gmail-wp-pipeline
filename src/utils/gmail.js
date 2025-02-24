@@ -104,6 +104,9 @@ class Gmail {
     this.processedLabel = res.data;
   }
 
+  /**
+   * @description Trash messages older than the threshold set in the config
+   */
   async trashOldMessages(){
     if ( !config.gmail.trashThreshold ) {
       logger.info('Trash threshold not set. Not trashing old messages');

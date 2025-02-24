@@ -14,6 +14,8 @@ class TaskWorker {
       }
       logger.info(`Message from recognized email list: ${message.emailList.sender}`, {data: message.loggerInfo});
 
+      await message.postToWordpress();
+
 
       processCt++;
       // todo: uncomment when done testing

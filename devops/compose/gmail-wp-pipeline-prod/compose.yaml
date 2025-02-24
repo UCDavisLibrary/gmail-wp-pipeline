@@ -3,6 +3,6 @@ services:
     env_file:
       - .env
     environment:
-      APP_LOGGER_ALERT_ON_ERROR: 'true'
+      GMAILWP_LOGGER_ALERT_ON_ERROR: 'true'
     volumes:
       - ../../../secrets:/secrets
