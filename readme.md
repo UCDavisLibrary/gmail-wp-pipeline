@@ -4,6 +4,13 @@ IN ACTIVE DEVELOPMENT!
 
 Creates wordpress posts from Gmail emails. Used for the intranet.
 
+## TODO:
+- Figure out how departments will be tagged once the intranet project progresses that far
+- Handle non-personal email addresses
+  - Right now, they will get posted as the service account if not in our IAM system.
+  - Won't be that many... Could make a wp account for them ahead of time, but then they also need to get tagged with the appropriate department
+- Create service account for intranet. ensure that application password functionality of api works with oidc. might need to get oauth token?
+
 ## Local Development
 
 - Build local image with `./devops/cmds/build-local-dev.sh` 

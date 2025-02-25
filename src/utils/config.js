@@ -83,6 +83,12 @@ class Config {
       password: this.getEnv('GMAILWP_WP_PASSWORD', false, true)
     }
 
+    this.ucdlibIamApi = {
+      url: this.getEnv('GMAILWP_UCDLIB_IAM_API_URL', 'https://iam.staff.library.ucdavis.edu/json'),
+      username: this.getEnv('GMAILWP_UCDLIB_IAM_API_USERNAME', false, true),
+      password: this.getEnv('GMAILWP_UCDLIB_IAM_API_PASSWORD', false, true)
+    }
+
     this.logger = {
       name: this.getEnv('GMAILWP_LOGGER_NAME', this.appName),
       streams: this.toArray( this.getEnv('GMAILWP_LOGGER_STREAM', 'console,gc') ),
