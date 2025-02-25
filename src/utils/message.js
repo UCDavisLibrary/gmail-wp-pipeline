@@ -4,6 +4,9 @@ import config from './config.js';
 import wp from './wp.js';
 import ucdlibIam from './ucdlib-iam.js';
 import crypto from 'crypto';
+import ical from 'node-ical';
+import pkg from 'rrule';
+const { RRule } = pkg;
 
 /**
  * @description Class representing a single email message
@@ -80,6 +83,13 @@ export default class Message {
       content: this.getPostContent()
     };
 
+    // append event details to the content if message has a calendar event
+    const eventHtml = await this.getCalendarEventSummary('html');
+    if ( eventHtml ) {
+      post.content += eventHtml;
+    }
+
+    // get or create the wordpress author based on the email sender
     await this.syncWordpressAuthor();
     if ( this.author ) post.author = this.author.id;
 
@@ -148,6 +158,90 @@ export default class Message {
     // They just tend to gum up the works in wordpress
     content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
     return content;
+  }
+
+  async getCalendarEventSummary(fmt='json'){
+    const ics = await this.getCalendarIcs();
+    if ( !ics ) return null;
+    const event = Object.values(ics).find( e => e.type === 'VEVENT' );
+    if ( !event ) return null;
+
+    const summary = {
+      title: event?.summary?.val || event?.summary || '',
+      location: event?.location?.val || event?.location || '',
+      recurrence: event.rrule ? RRule.fromString(event.rrule.toString()).toText() : null
+    };
+
+    const dateFormatter = new Intl.DateTimeFormat('en-US',
+      {
+        timeZone: event?.start?.tz || 'America/Los_Angeles',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      }
+    );
+
+    if ( event?.start ) {
+      summary.start = dateFormatter.format(new Date(event.start));
+    }
+    if ( event?.end ) {
+      summary.end = dateFormatter.format(new Date(event.end));
+    }
+
+    if ( fmt === 'json' ) return summary;
+
+    if ( fmt === 'html' ) {
+      return `
+        <div>
+          <h2>Event Details</h2>
+          <p><strong>Title:</strong> ${summary.title}</p>
+          <p><strong>Location:</strong> ${summary.location}</p>
+          <p><strong>Start:</strong> ${summary.start}</p>
+          <p><strong>End:</strong> ${summary.end}</p>
+          ${summary.recurrence ? `<p><strong>Recurrence:</strong> ${summary.recurrence}</p>` : ''}
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * @description Get the ical data from the message
+   * @returns {Object} - The parsed ical data
+   */
+  async getCalendarIcs(){
+    if ( this.calendarIcs ) return this.calendarIcs;
+    const raw = await this.getCalendarPart();
+    if ( !raw ) return null;
+    this.calendarIcs = ical.sync.parseICS(raw);
+    return this.calendarIcs;
+  }
+
+  /**
+   * @description Get the first text/calendar part from the message
+   * @param {Array} parts
+   * @returns {String} - The ical data or null if not found
+   */
+  async getCalendarPart(parts = this.data.payload.parts){
+    if ( !Array.isArray(parts) ) return null;
+    const calendar = parts.find( p => p.mimeType === 'text/calendar' );
+    if ( calendar?.body?.data ) {
+      return Buffer.from(calendar.body.data, 'base64').toString('utf-8');
+    }
+    if ( calendar?.body?.attachmentId ) {
+      logger.info('Getting ical attachment', {data: {email: this.loggerInfo, attachmentId: calendar.body.attachmentId}});
+      const attachment = await gmail.getAttachment(this.id, calendar.body.attachmentId);
+      return Buffer.from(attachment.data, 'base64').toString('utf-8');
+    }
+    for (const part of parts) {
+      if (part.parts) {
+        const event = await this.getCalendarPart(part.parts);
+        if ( event ) return event;
+      }
+    }
+    return null;
   }
 
   /**

@@ -43,6 +43,23 @@ class Gmail {
   }
 
   /**
+   * @description Get an attachment from a message
+   * @param {String} messageId
+   * @param {String} attachmentId
+   * @returns {Object} - The attachment data
+   */
+  async getAttachment(messageId, attachmentId){
+    logger.info('Getting attachment', {data: {messageId, attachmentId}});
+    const res = await this.client.users.messages.attachments.get({
+      userId: 'me',
+      messageId,
+      id: attachmentId
+    });
+    logger.info('Got attachment', {data: {messageId, attachmentId}});
+    return res.data;
+  }
+
+  /**
    * @description Gets messages that are not already labeled with a sympa list label
    * @returns {Array<Message>}
    */
