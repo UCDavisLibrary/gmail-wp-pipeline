@@ -50,17 +50,64 @@ export default class Message {
   }
 
   /**
-   * @description Post the message to Wordpress
+   * @description Post the message to Wordpress along with any attachments
    */
   async postToWordpress(){
     try {
-      const data = await this.transform();
       logger.info('Posting to wordpress', {data: this.loggerInfo});
+
+      // get and upload attachments
+      logger.info('Getting message attachments', {data: this.loggerInfo});
+      this.attachments = await this.getAttachments();
+      logger.info('Got message attachments', {data: this.loggerInfo});
+      for ( const attachment of this.attachments ) {
+        attachment.wpMedia = await wp.uploadMedia(attachment.data, attachment.filename, attachment.mimeType);
+      }
+
+      const data = await this.transform();
+
+      // substitute cid references in the post content with the attachment urls
+      for ( const attachment of this.attachments ) {
+        if ( attachment.cid ) {
+          logger.info('Substituting attachment cid in post content', {data: {email: this.loggerInfo, cid: attachment.cid, url: attachment.wpMedia.source_url}});
+          data.content = data.content.replace(`cid:${attachment.cid}`, attachment.wpMedia.source_url);
+        }
+      }
+
+      // add attachments to the post content if not already embedded
+      const nonEmbedAttachments = this.attachments.filter( a => !a.cid );
+      if ( nonEmbedAttachments.length){
+        data.content += `
+        <div>
+          <h2>Attachments</h2>
+          <ul class='list--arrow'>
+            ${this.attachments.map( a => `<li><a href="${a.wpMedia.source_url}">${a.filename}</a></li>` ).join('')}
+          </ul>
+        </div>
+      `;
+      }
+
+      logger.info('Creating news post', {data: this.loggerInfo});
       this.post = await wp.createNews(data);
-      logger.info('Posted to wordpress', {data: {email: this.loggerInfo, postId: this.post.id}});
+      logger.info('News post created', {data: {email: this.loggerInfo, postId: this.post.id}});
+
+      // update attachments to include post and author ids
+      for ( const attachment of this.attachments ) {
+        const data = { post: this.post.id };
+        if ( this.author ) data.author = this.author.id;
+        logger.info('Updating attachment in WP with post and author ids', {data: {email: this.loggerInfo, attachmentId: attachment.wpMedia.id}});
+        attachment.wpMedia = await wp.updateMedia(attachment.wpMedia.id, data);
+      }
+
+      logger.info('Message successfully posted to wordpress', {data: this.loggerInfo});
     } catch (err) {
       logger.error('Error posting to wordpress. Undoing any write actions...', {data: this.loggerInfo, error: err.message, stack: err.stack});
-      if ( this.mediaUploads ) {}
+      const uploads = (this.attachments || []).map( a => a.wpMedia );
+      for ( const upload of uploads ){
+        if ( upload ) {
+          await wp.deleteMedia(upload.id);
+        }
+      }
       if ( this.authorCreated ) {
         await wp.deleteAuthor(this.author.id);
       }
@@ -160,6 +207,11 @@ export default class Message {
     return content;
   }
 
+  /**
+   * @description Get the summary of the calendar event from the message
+   * @param {String} fmt - The format to return the summary in.  'json' or 'html'
+   * @returns {Object|String} - The summary of the calendar event. Null if no event found
+   */
   async getCalendarEventSummary(fmt='json'){
     const ics = await this.getCalendarIcs();
     if ( !ics ) return null;
@@ -242,6 +294,35 @@ export default class Message {
       }
     }
     return null;
+  }
+
+  async getAttachments(parts = this.data.payload.parts){
+    const mimeTypeExclude = ['text/plain', 'text/html', 'text/calendar'];
+    if ( !Array.isArray(parts) ) return [];
+    const attachments = [];
+    for (const part of parts) {
+      if ( part.filename && !mimeTypeExclude.includes(part.mimeType) ) {
+        const attachment = {
+          filename: part.filename,
+          mimeType: part.mimeType,
+          part
+        };
+        let cid = part.headers.find( h => h.name === 'Content-ID' )?.value;
+        if ( cid ) {
+          attachment.cid = cid.replace(/^<|>$/g, '');
+        }
+        if ( part.body.data ) {
+          attachment.data = Buffer.from(part.body.data, 'base64');
+        } else if ( part.body.attachmentId ) {
+          attachment.data = Buffer.from((await gmail.getAttachment(this.id, part.body.attachmentId)).data, 'base64');
+        }
+        attachments.push(attachment);
+      }
+      if (part.parts) {
+        attachments.push(...await this.getAttachments(part.parts));
+      }
+    }
+    return attachments;
   }
 
   /**

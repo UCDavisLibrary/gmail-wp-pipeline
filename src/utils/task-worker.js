@@ -1,13 +1,18 @@
 import logger from "./logger.js";
 import gmail from "./gmail.js";
 
+/**
+ * @description Worker class for the pipeline
+ */
 class TaskWorker {
 
   async run(opts={}){
     const unprocessedMessages = await gmail.getUnprocessedMessages();
     let processCt = 0;
     for ( let message of unprocessedMessages ){
+
       await message.get();
+
       if ( !message.emailList ){
         logger.info('Message is not from a recognized email list. Skipping', {data: message.loggerInfo});
         continue;
@@ -16,10 +21,8 @@ class TaskWorker {
 
       await message.postToWordpress();
 
-
       processCt++;
-      // todo: uncomment when done testing
-      // await message.markAsProcessed(processCt === 1);
+      await message.markAsProcessed(processCt === 1);
     }
 
     await gmail.trashOldMessages();
