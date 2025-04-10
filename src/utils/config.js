@@ -15,6 +15,8 @@ class Config {
 
     this.ignoreEnvError = this.getEnv('GMAILWP_IGNORE_ENV_ERROR', false);
 
+    this.customScript = this.getEnv('GMAILWP_CUSTOM_SCRIPT', '', false);
+
     // must have unique instance name to ensure that multiple sites can share the same email account
     this.instanceName = this.getEnv('GMAILWP_INSTANCE_NAME', false, true);
 

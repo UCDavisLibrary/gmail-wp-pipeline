@@ -28,7 +28,7 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error creating wordpress news post: ${text}`);
+      throw new Error(`${res.status} Error creating wordpress news post: ${text}`);
     }
     return await res.json();
   }
@@ -54,7 +54,7 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error uploading media to wordpress: ${text}`);
+      throw new Error(`${res.status} Error uploading media to wordpress: ${text}`);
     }
     const data = await res.json();
     logger.info(`Uploaded media to wordpress: ${fileName}`, {data: {id: data.id, url: data.source_url}});
@@ -80,7 +80,7 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error updating media in wordpress: ${text}`);
+      throw new Error(`${res.status} Error updating media in wordpress: ${text}`);
     }
     const updatedData = await res.json();
     logger.info(`Updated media in wordpress: ${id}`, {data: {id: updatedData.id, url: updatedData.source_url}});
@@ -102,7 +102,44 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error finding author: ${text}`);
+      throw new Error(`${res.status} Error finding author: ${text}`);
+    }
+    return await res.json();
+  }
+
+  /**
+   * @description Find a category in Wordpress
+   * @param {String} search - The search string to find the category
+   * @returns {Array<Object>} - The response from the Wordpress API
+   */
+  async findCategory(search){
+    const url = `${this.apiUrl}/categories?search=${search}`;
+    const res = await fetch(url, {
+      headers: this.addAuthHeader({
+        'Content-Type': 'application/json'
+      })
+    });
+
+    if ( !res.ok ){
+      const text = await res.text() || '';
+      throw new Error(`${res.status} Error finding category: ${text}`);
+    }
+    return await res.json();
+  }
+
+  async createCategory(payload){
+    const url = `${this.apiUrl}/categories`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: this.addAuthHeader({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify(payload)
+    });
+
+    if ( !res.ok ){
+      const text = await res.text() || '';
+      throw new Error(`${res.status} Error creating category: ${text}`);
     }
     return await res.json();
   }
@@ -124,7 +161,7 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error creating wordpress user: ${text}`);
+      throw new Error(`${res.status} Error creating wordpress user: ${text}`);
     }
     return await res.json();
   }
@@ -144,9 +181,25 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error deleting author: ${text}`);
+      throw new Error(`${res.status} Error deleting author: ${text}`);
     }
     logger.info(`Deleted author: ${id}`);
+    return await res.json();
+  }
+
+  async deleteCategory(id){
+    const url = `${this.apiUrl}/categories/${id}`;
+    logger.info(`Deleting category: ${id}`);
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: this.addAuthHeader()
+    });
+
+    if ( !res.ok ){
+      const text = await res.text() || '';
+      throw new Error(`${res.status} Error deleting category: ${text}`);
+    }
+    logger.info(`Deleted category: ${id}`);
     return await res.json();
   }
 
@@ -156,7 +209,7 @@ class Wp {
    * @returns
    */
   async deleteMedia(id){
-    const url = `${this.apiUrl}/media/${id}`;
+    const url = `${this.apiUrl}/media/${id}?force=true`;
     logger.info(`Deleting media: ${id}`);
     const res = await fetch(url, {
       method: 'DELETE',
@@ -165,7 +218,7 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error deleting media: ${text}`);
+      throw new Error(`${res.status} Error deleting media: ${text}`);
     }
     logger.info(`Deleted media: ${id}`);
     return await res.json();
@@ -186,7 +239,7 @@ class Wp {
 
     if ( !res.ok ){
       const text = await res.text() || '';
-      throw new Error(`${response.status} Error deleting wordpress news post: ${text}`);
+      throw new Error(`${res.status} Error deleting wordpress news post: ${text}`);
     }
     logger.info(`Deleted wordpress news post: ${id}`);
     return await res.json();

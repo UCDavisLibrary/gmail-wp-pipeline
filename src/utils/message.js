@@ -3,6 +3,7 @@ import logger from './logger.js';
 import config from './config.js';
 import wp from './wp.js';
 import ucdlibIam from './ucdlib-iam.js';
+import UcdlibIntranet from './ucdlib-intranet.js';
 import crypto from 'crypto';
 import ical from 'node-ical';
 import pkg from 'rrule';
@@ -87,6 +88,9 @@ export default class Message {
       `;
       }
 
+      this.intranetCustomizations = new UcdlibIntranet(this, data);
+      await this.intranetCustomizations.runIfActive();
+
       logger.info('Creating news post', {data: this.loggerInfo});
       this.post = await wp.createNews(data);
       logger.info('News post created', {data: {email: this.loggerInfo, postId: this.post.id}});
@@ -113,6 +117,9 @@ export default class Message {
       }
       if ( this.post ){
         await wp.deleteNews(this.post.id);
+      }
+      if ( this.intranetCustomizations ) {
+        await this.intranetCustomizations.cleanup();
       }
       throw err;
     }
