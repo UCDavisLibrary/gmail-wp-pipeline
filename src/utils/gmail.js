@@ -49,13 +49,13 @@ class Gmail {
    * @returns {Object} - The attachment data
    */
   async getAttachment(messageId, attachmentId){
-    logger.info('Getting attachment', {data: {messageId, attachmentId}});
+    logger.info('Getting attachment from Gmail API', {data: {messageId, attachmentId}});
     const res = await this.client.users.messages.attachments.get({
       userId: 'me',
       messageId,
       id: attachmentId
     });
-    logger.info('Got attachment', {data: {messageId, attachmentId}});
+    logger.info('Got attachment from Gmail API', {data: {messageId, attachmentId}});
     return res.data;
   }
 
@@ -64,7 +64,7 @@ class Gmail {
    * @returns {Array<Message>}
    */
   async getUnprocessedMessages(){
-    logger.info('Getting unprocessed messages');
+    logger.info('Getting unprocessed messages from Gmail API');
     return this.list({
       q: `-label:${config.gmail.processedLabel}`
     });
@@ -78,10 +78,10 @@ class Gmail {
   async list(query={}){
     if ( !query.userId ) query.userId = 'me';
     if ( !query.maxResults ) query.maxResults = 500;
-    logger.info('listing messages', {data: query});
+    logger.info('Running Gmail API list messages query', {data: query});
     const res = await this.client.users.messages.list(query);
     if ( !res.data.messages ){
-      logger.info('No messages found', {data: query});
+      logger.info('No messages found from Gmail API query', {data: query});
       return [];
     }
     logger.info(`Got ${res.data.messages.length} messages`);
@@ -98,7 +98,7 @@ class Gmail {
   async ensureProcessedLabel(resetCache){
     if ( resetCache ) this.processedLabel = false;
     if ( this.processedLabel ) return;
-    logger.info(`Fetching processed label: ${config.gmail.processedLabel}`);
+    logger.info(`Fetching processed label from Gmail API: ${config.gmail.processedLabel}`);
     let res = await this.client.users.labels.list({
       userId: 'me'
     });
@@ -129,7 +129,7 @@ class Gmail {
       logger.info('Trash threshold not set. Not trashing old messages');
       return;
     }
-    logger.info(`Trashing messages older than: ${config.gmail.trashThreshold}`);
+    logger.info(`Querying for trashed messages older than: ${config.gmail.trashThreshold}`);
     const messages = await this.list({
       q: `older_than:${config.gmail.trashThreshold}`
     });

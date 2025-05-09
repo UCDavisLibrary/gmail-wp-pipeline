@@ -32,7 +32,7 @@ export default class Message {
       id: this.id
     });
     this.data = res.data;
-    logger.info('Got message', {data: this.loggerInfo});
+    logger.info(`Got message: ${this.id}`, {data: this.loggerInfo});
     return this.data;
   }
 
@@ -58,9 +58,9 @@ export default class Message {
       logger.info('Posting to wordpress', {data: this.loggerInfo});
 
       // get and upload attachments
-      logger.info('Getting message attachments', {data: this.loggerInfo});
+      logger.info(`Getting message attachments: ${this.id}`, {data: this.loggerInfo});
       this.attachments = await this.getAttachments();
-      logger.info('Got message attachments', {data: this.loggerInfo});
+      logger.info(`Got message attachments: ${this.id}`, {data: this.loggerInfo});
       for ( const attachment of this.attachments ) {
         attachment.wpMedia = await wp.uploadMedia(attachment.data, attachment.filename, attachment.mimeType);
       }
