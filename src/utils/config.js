@@ -69,8 +69,8 @@ class Config {
     } else {
       this.emailLists = [
         {
-          sender: 'lib-personnel-request@listserv.lib.ucdavis.edu',
-          subjectStrip: '[lib-personnel]'
+          sender: 'lib-affiliates@listserv.lib.ucdavis.edu',
+          subjectStrip: '[lib-affiliates]'
         },
         {
           sender: 'liball-request@listserv.lib.ucdavis.edu',
