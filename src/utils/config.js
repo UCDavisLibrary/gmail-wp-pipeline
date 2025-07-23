@@ -73,8 +73,8 @@ class Config {
           subjectStrip: '[lib-affiliates]'
         },
         {
-          sender: 'liball-request@listserv.lib.ucdavis.edu',
-          subjectStrip: '[liball]'
+          sender: 'lib-personnel-request@listserv.lib.ucdavis.edu',
+          subjectStrip: '[lib-personnel]'
         }
       ];
     }
