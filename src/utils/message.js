@@ -191,11 +191,29 @@ export default class Message {
     return this.author;
   };
 
+
+  /**
+   * @description Get the content for the post from the message
+   * @returns {String} - The content for the post
+   */
+  getPostContent() {
+    let content = this.getContentFromParts() || '';
+
+    if ( !content && this.data?.payload?.body?.data ) {
+      content = Buffer.from(this.data.payload.body.data, 'base64').toString('utf-8');
+    }
+
+    // Strip <head>...</head> tags from the content
+    // They just tend to gum up the works in wordpress
+    content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    return content;
+  }
+
   /**
    * @description Recursively concatenate all text/plain or text/html from payload parts
    * @returns {String} - The concatenated content
    */
-  getPostContent(parts = this.data.payload.parts, content = '') {
+  getContentFromParts(parts = this.data.payload.parts, content = ''){
     if ( !Array.isArray(parts) ) return content;
 
     const hasHtml = parts.some( p => p.mimeType === 'text/html' );
@@ -208,9 +226,6 @@ export default class Message {
       }
     }
 
-    // Strip <head>...</head> tags from the content
-    // They just tend to gum up the works in wordpress
-    content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
     return content;
   }
 
