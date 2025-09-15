@@ -222,7 +222,7 @@ export default class Message {
         content += part?.body?.data ? Buffer.from(part.body.data, 'base64').toString('utf-8') : '';
       }
       if (part.parts) {
-        content = this.getPostContent(part.parts, content);
+        content = this.getContentFromParts(part.parts, content);
       }
     }
 
