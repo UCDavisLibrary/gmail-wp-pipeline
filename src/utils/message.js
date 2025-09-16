@@ -3,6 +3,7 @@ import logger from './logger.js';
 import config from './config.js';
 import wp from './wp.js';
 import ucdlibIam from './ucdlib-iam.js';
+import UcdlibIntranet from './ucdlib-intranet.js';
 import crypto from 'crypto';
 import ical from 'node-ical';
 import pkg from 'rrule';
@@ -31,7 +32,7 @@ export default class Message {
       id: this.id
     });
     this.data = res.data;
-    logger.info('Got message', {data: this.loggerInfo});
+    logger.info(`Got message: ${this.id}`, {data: this.loggerInfo});
     return this.data;
   }
 
@@ -57,9 +58,9 @@ export default class Message {
       logger.info('Posting to wordpress', {data: this.loggerInfo});
 
       // get and upload attachments
-      logger.info('Getting message attachments', {data: this.loggerInfo});
+      logger.info(`Getting message attachments: ${this.id}`, {data: this.loggerInfo});
       this.attachments = await this.getAttachments();
-      logger.info('Got message attachments', {data: this.loggerInfo});
+      logger.info(`Got message attachments: ${this.id}`, {data: this.loggerInfo});
       for ( const attachment of this.attachments ) {
         attachment.wpMedia = await wp.uploadMedia(attachment.data, attachment.filename, attachment.mimeType);
       }
@@ -87,6 +88,9 @@ export default class Message {
       `;
       }
 
+      this.intranetCustomizations = new UcdlibIntranet(this, data);
+      await this.intranetCustomizations.runIfActive();
+
       logger.info('Creating news post', {data: this.loggerInfo});
       this.post = await wp.createNews(data);
       logger.info('News post created', {data: {email: this.loggerInfo, postId: this.post.id}});
@@ -113,6 +117,9 @@ export default class Message {
       }
       if ( this.post ){
         await wp.deleteNews(this.post.id);
+      }
+      if ( this.intranetCustomizations ) {
+        await this.intranetCustomizations.cleanup();
       }
       throw err;
     }
@@ -184,11 +191,29 @@ export default class Message {
     return this.author;
   };
 
+
+  /**
+   * @description Get the content for the post from the message
+   * @returns {String} - The content for the post
+   */
+  getPostContent() {
+    let content = this.getContentFromParts() || '';
+
+    if ( !content && this.data?.payload?.body?.data ) {
+      content = Buffer.from(this.data.payload.body.data, 'base64').toString('utf-8');
+    }
+
+    // Strip <head>...</head> tags from the content
+    // They just tend to gum up the works in wordpress
+    content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    return content;
+  }
+
   /**
    * @description Recursively concatenate all text/plain or text/html from payload parts
    * @returns {String} - The concatenated content
    */
-  getPostContent(parts = this.data.payload.parts, content = '') {
+  getContentFromParts(parts = this.data.payload.parts, content = ''){
     if ( !Array.isArray(parts) ) return content;
 
     const hasHtml = parts.some( p => p.mimeType === 'text/html' );
@@ -197,13 +222,10 @@ export default class Message {
         content += part?.body?.data ? Buffer.from(part.body.data, 'base64').toString('utf-8') : '';
       }
       if (part.parts) {
-        content = this.getPostContent(part.parts, content);
+        content = this.getContentFromParts(part.parts, content);
       }
     }
 
-    // Strip <head>...</head> tags from the content
-    // They just tend to gum up the works in wordpress
-    content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
     return content;
   }
 
